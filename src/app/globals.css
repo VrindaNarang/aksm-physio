@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: var(--color-teal-600);
+  --color-secondary: var(--color-slate-500);
+  --color-accent: var(--color-teal-500);
+}
+
+/* Custom styles if needed, but Tailwind classes are preferred */
+body {
+  @apply bg-slate-50 text-slate-900;
+}
