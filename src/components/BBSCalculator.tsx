@@ -125,7 +125,7 @@ export default function BBSCalculator() {
             doc.setTextColor(0, 0, 0);
             doc.text('SCORE INTERPRETATION GUIDE', 20, 185);
 
-            const guides = [
+            const guides: { range: string, risk: string, color: [number, number, number], textColor: [number, number, number] }[] = [
                 { range: '45 - 56', risk: 'Low Fall Risk', color: [240, 253, 244], textColor: [20, 83, 45] },
                 { range: '41 - 44', risk: 'Medium Fall Risk', color: [254, 252, 232], textColor: [113, 63, 18] },
                 { range: '21 - 40', risk: 'High Fall Risk', color: [255, 247, 237], textColor: [124, 45, 18] },
@@ -134,11 +134,11 @@ export default function BBSCalculator() {
 
             let yPos = 190;
             guides.forEach(guide => {
-                doc.setFillColor(...guide.color);
+                doc.setFillColor(guide.color[0], guide.color[1], guide.color[2]);
                 doc.rect(20, yPos, 170, 10, 'F');
                 doc.setFontSize(10);
                 doc.setFont('helvetica', 'bold');
-                doc.setTextColor(...guide.textColor);
+                doc.setTextColor(guide.textColor[0], guide.textColor[1], guide.textColor[2]);
                 doc.text(guide.range, 25, yPos + 7);
                 doc.text(guide.risk, 160, yPos + 7, { align: 'right' });
                 yPos += 12;
