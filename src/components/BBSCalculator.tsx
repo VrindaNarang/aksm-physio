@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { bbsQuestions } from '@/data/bbs-data';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
+import jsPDF from 'jspdf';
 
 export default function BBSCalculator() {
     const [scores, setScores] = useState<{ [key: number]: number | null }>({});
     const [totalScore, setTotalScore] = useState(0);
+    const [patientName, setPatientName] = useState('');
+    const [isGenerating, setIsGenerating] = useState(false);
 
     useEffect(() => {
         const newTotal = Object.values(scores).reduce<number>((acc, curr) => (curr !== null ? acc + curr : acc), 0);
@@ -18,10 +21,160 @@ export default function BBSCalculator() {
     };
 
     const getInterpretation = (score: number) => {
-        if (score >= 45) return { text: "Primarily independent, low fall risk", color: "bg-green-100 text-green-800 border-green-200", iconColor: "text-green-600" };
-        if (score >= 41) return { text: "Independent but significant fall risk", color: "bg-yellow-100 text-yellow-800 border-yellow-200", iconColor: "text-yellow-600" };
-        if (score >= 21) return { text: "Requires assistance, 100% fall risk", color: "bg-orange-100 text-orange-800 border-orange-200", iconColor: "text-orange-600" };
-        return { text: "Wheelchair required, 100% fall risk", color: "bg-red-100 text-red-800 border-red-200", iconColor: "text-red-600" };
+        if (score >= 45) return { text: "Primarily independent, low fall risk", color: "bg-green-100 text-green-800 border-green-200", iconColor: "text-green-600", riskLevel: "Low Fall Risk" };
+        if (score >= 41) return { text: "Independent but significant fall risk", color: "bg-yellow-100 text-yellow-800 border-yellow-200", iconColor: "text-yellow-600", riskLevel: "Medium Fall Risk" };
+        if (score >= 21) return { text: "Requires assistance, 100% fall risk", color: "bg-orange-100 text-orange-800 border-orange-200", iconColor: "text-orange-600", riskLevel: "High Fall Risk" };
+        return { text: "Wheelchair required, 100% fall risk", color: "bg-red-100 text-red-800 border-red-200", iconColor: "text-red-600", riskLevel: "Very High Fall Risk" };
+    };
+
+    const handleDownloadReport = () => {
+        setIsGenerating(true);
+
+        try {
+            const doc = new jsPDF();
+            const interpretation = getInterpretation(totalScore);
+            const currentDate = new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric'
+            });
+
+            // Set colors
+            const tealColor = [15, 118, 110]; // #0f766e
+            const grayColor = [100, 116, 139]; // #64748b
+
+            // Header
+            doc.setFillColor(15, 118, 110);
+            doc.rect(0, 0, 210, 35, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.setFont('helvetica', 'bold');
+            doc.text('AKSM Physio', 105, 15, { align: 'center' });
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Berg Balance Scale Assessment Report', 105, 25, { align: 'center' });
+
+            // Patient Information
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PATIENT INFORMATION', 20, 50);
+
+            doc.setFillColor(248, 250, 252);
+            doc.rect(20, 55, 170, 25, 'F');
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(100, 116, 139);
+            doc.text('PATIENT NAME', 25, 63);
+            doc.text('ASSESSMENT DATE', 115, 63);
+
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text(patientName || 'Not Provided', 25, 72);
+            doc.text(currentDate, 115, 72);
+
+            // Assessment Results
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('ASSESSMENT RESULTS', 20, 95);
+
+            // Score box
+            doc.setFillColor(204, 251, 241);
+            doc.setDrawColor(94, 234, 212);
+            doc.setLineWidth(1);
+            doc.rect(20, 100, 170, 35, 'FD');
+
+            doc.setFontSize(10);
+            doc.setTextColor(71, 85, 105);
+            doc.setFont('helvetica', 'normal');
+            doc.text('BERG BALANCE SCALE SCORE', 105, 110, { align: 'center' });
+
+            doc.setFontSize(36);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 118, 110);
+            doc.text(`${totalScore}`, 95, 125, { align: 'center' });
+            doc.setFontSize(18);
+            doc.setTextColor(100, 116, 139);
+            doc.text('/ 56', 115, 125);
+
+            // Risk Category
+            doc.setFillColor(248, 250, 252);
+            doc.setDrawColor(203, 213, 225);
+            doc.setLineWidth(1);
+            doc.rect(20, 145, 170, 25, 'FD');
+
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.setFont('helvetica', 'normal');
+            doc.text('RISK CATEGORY', 25, 152);
+
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text(interpretation.riskLevel, 25, 160);
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(51, 65, 85);
+            doc.text(interpretation.text, 25, 167);
+
+            // Score Interpretation Guide
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 0, 0);
+            doc.text('SCORE INTERPRETATION GUIDE', 20, 185);
+
+            const guides = [
+                { range: '45 - 56', risk: 'Low Fall Risk', color: [240, 253, 244], textColor: [20, 83, 45] },
+                { range: '41 - 44', risk: 'Medium Fall Risk', color: [254, 252, 232], textColor: [113, 63, 18] },
+                { range: '21 - 40', risk: 'High Fall Risk', color: [255, 247, 237], textColor: [124, 45, 18] },
+                { range: '0 - 20', risk: 'Very High Fall Risk', color: [254, 242, 242], textColor: [127, 29, 29] }
+            ];
+
+            let yPos = 190;
+            guides.forEach(guide => {
+                doc.setFillColor(...guide.color);
+                doc.rect(20, yPos, 170, 10, 'F');
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(...guide.textColor);
+                doc.text(guide.range, 25, yPos + 7);
+                doc.text(guide.risk, 160, yPos + 7, { align: 'right' });
+                yPos += 12;
+            });
+
+            // Footer
+            doc.setDrawColor(226, 232, 240);
+            doc.setLineWidth(0.5);
+            doc.line(20, 245, 190, 245);
+
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Based on the Berg Balance Scale (1989) by Katherine Berg', 105, 252, { align: 'center' });
+
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 118, 110);
+            doc.text('Assessed by Dr. Komal Aditi Kapoor', 105, 260, { align: 'center' });
+
+            doc.setFontSize(8);
+            doc.setTextColor(148, 163, 184);
+            doc.setFont('helvetica', 'normal');
+            doc.text('This report is generated for clinical reference purposes only.', 105, 270, { align: 'center' });
+
+            // Save the PDF
+            const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+            const fileName = `BBS_Report_${patientName.replace(/\s+/g, '_') || 'Patient'}_${date}.pdf`;
+            doc.save(fileName);
+
+            setIsGenerating(false);
+        } catch (error) {
+            console.error('Error generating report:', error);
+            alert(`Failed to generate report: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            setIsGenerating(false);
+        }
     };
 
     const interpretation = getInterpretation(totalScore);
@@ -31,6 +184,21 @@ export default function BBSCalculator() {
         <div className="flex flex-col lg:flex-row gap-8 relative">
             {/* Main Content - Questions */}
             <div className="flex-1 space-y-8">
+                {/* Patient Name Input */}
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                    <label htmlFor="patient-name" className="block text-sm font-semibold text-slate-800 mb-2">
+                        Patient Name
+                    </label>
+                    <input
+                        type="text"
+                        id="patient-name"
+                        value={patientName}
+                        onChange={(e) => setPatientName(e.target.value)}
+                        placeholder="Enter patient name"
+                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none transition-all"
+                    />
+                </div>
+
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mb-6">
                     <h2 className="text-xl font-semibold text-slate-800 mb-2">Instructions</h2>
                     <p className="text-slate-600">
@@ -146,8 +314,12 @@ export default function BBSCalculator() {
                         <p className="text-sm text-teal-700 mb-4">
                             Document this score in the patient's file. Consider referrals for gait training or assistive devices if score is below 45.
                         </p>
-                        <button className="w-full py-2 px-4 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                            Print / Save Results
+                        <button
+                            onClick={handleDownloadReport}
+                            disabled={isGenerating}
+                            className="w-full py-2 px-4 bg-teal-600 hover:bg-teal-700 disabled:bg-teal-400 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                        >
+                            {isGenerating ? 'Generating...' : 'Print / Save Results'}
                         </button>
                     </div>
 
